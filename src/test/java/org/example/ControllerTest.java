@@ -48,4 +48,8 @@ public class ControllerTest {
         assertTrue(employeeMap.isEmpty());
     }
 
+    // void writeAll (проверить создался ли файл, если да - то проверить не пустой ли он)
+    // void readAll (перегнать все данные с файла в мап и если мап не пусто - то ок)
+    // void readSingle()
+    // void writeSingle()
 }
