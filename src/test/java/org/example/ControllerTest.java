@@ -1,14 +1,13 @@
 package org.example;
 
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Scanner;
 
 import static org.junit.Assert.*;
@@ -48,8 +47,38 @@ public class ControllerTest {
         assertTrue(employeeMap.isEmpty());
     }
 
-    // void writeAll (проверить создался ли файл, если да - то проверить не пустой ли он)
-    // void readAll (перегнать все данные с файла в мап и если мап не пусто - то ок)
-    // void readSingle()
-    // void writeSingle()
+    @Test
+    void writeEmployeesToZipTest(){
+        Employee employee = new Director(1231233256335L, "Max", "Cock", 1234, 4321, 5678, 789, 987);
+        employeeMap.put(employee.pesel, employee);
+
+        controller.writeEmployeesToZip(employeeMap, "1.gz");
+
+        StringBuilder content = new StringBuilder();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader("1.gz"))) {
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+
+            String value = content.toString();
+            assertFalse(value.isEmpty());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    void readEmployeestoZip(){
+        Employee employee = new Director(1231233256335L, "Max", "Cock", 1234, 4321, 5678, 789, 987);
+        employeeMap.put(employee.pesel, employee);
+        controller.writeEmployeesToZip(employeeMap, "1.gz");
+        employeeMap.clear();
+
+        controller.readEmployeesFromZip("1.gz", employeeMap);
+        assertFalse(employeeMap.isEmpty());
+    }
 }
