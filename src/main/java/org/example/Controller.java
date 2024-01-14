@@ -5,8 +5,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 public class Controller implements Serializable {
     public static void show(Map<Long, Employee> employees) {
@@ -86,18 +86,14 @@ public class Controller implements Serializable {
     }
 
     public static void writeSingleEmployeeToZip(Employee employee, Long pesel, String fileName) {
-        try (FileOutputStream fos = new FileOutputStream(fileName);
-             ZipOutputStream zos = new ZipOutputStream(fos)) {
+        try (FileOutputStream fos = new FileOutputStream(fileName); ZipOutputStream zos = new ZipOutputStream(fos)) {
 
-            // Create a new entry in the zip file for each employee
             ZipEntry entryInZip = new ZipEntry(pesel + ".txt");
             zos.putNextEntry(entryInZip);
 
-            // Convert employee details to bytes and write to the zip file
             byte[] employeeBytes = employee.toString().getBytes();
             zos.write(employeeBytes, 0, employeeBytes.length);
 
-            // Close the entry
             zos.closeEntry();
 
             System.out.println("Employee written to the zip file: " + fileName);
@@ -107,28 +103,77 @@ public class Controller implements Serializable {
         }
     }
 
+    public static Object readSingleEmployeesFromZip(String fileName) {
+//        try (FileInputStream fis = new FileInputStream(fileName); ZipInputStream zis = new ZipInputStream(fis)) {
+//
+//            ZipEntry entry;
+//            while ((entry = zis.getNextEntry()) != null) {
+//                System.out.println("Employee details from " + entry.getName() + ":");
+//
+//                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//                byte[] buffer = new byte[1024];
+//                int bytesRead;
+//                while ((bytesRead = zis.read(buffer)) != -1) {
+//                    baos.write(buffer, 0, bytesRead);
+//                }
+//
+//                System.out.println(baos.toString());
+//
+//                zis.closeEntry();
+//            }
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        return null;
+        try (FileInputStream fis = new FileInputStream(fileName); ZipInputStream zis = new ZipInputStream(fis)) {
+
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                System.out.println("Employee details from " + entry.getName() + ":");
+
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                while ((bytesRead = zis.read(buffer)) != -1) {
+                    baos.write(buffer, 0, bytesRead);
+                }
+
+                String employeeDetails = baos.toString();
+
+                Employee employee = parseEmployeeDetails(employeeDetails);
+
+                System.out.println(employeeDetails);
+
+                zis.closeEntry();
+
+                return employee;
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     public static void writeEmployeesToZip(Map<Long, Employee> employees, String fileName) {
         if (employees.isEmpty()) {
             System.out.println("No employees to write to the zip file.");
             return;
         }
 
-        try (FileOutputStream fos = new FileOutputStream(fileName);
-             ZipOutputStream zos = new ZipOutputStream(fos)) {
+        try (FileOutputStream fos = new FileOutputStream(fileName); ZipOutputStream zos = new ZipOutputStream(fos)) {
 
             for (Map.Entry<Long, Employee> entry : employees.entrySet()) {
                 Long pesel = entry.getKey();
                 Employee employee = entry.getValue();
 
-                // Create a new entry in the zip file for each employee
                 ZipEntry entryInZip = new ZipEntry(pesel + ".txt");
                 zos.putNextEntry(entryInZip);
 
-                // Convert employee details to bytes and write to the zip file
                 byte[] employeeBytes = employee.toString().getBytes();
                 zos.write(employeeBytes, 0, employeeBytes.length);
 
-                // Close the entry
                 zos.closeEntry();
             }
 
@@ -139,32 +184,6 @@ public class Controller implements Serializable {
         }
     }
 
-    public static Object readSingleEmployeesFromZip(String fileName) {
-        try (FileInputStream fis = new FileInputStream(fileName);
-             ZipInputStream zis = new ZipInputStream(fis)) {
-
-            ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
-                System.out.println("Employee details from " + entry.getName() + ":");
-
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] buffer = new byte[1024];
-                int bytesRead;
-                while ((bytesRead = zis.read(buffer)) != -1) {
-                    baos.write(buffer, 0, bytesRead);
-                }
-
-                System.out.println(baos.toString());
-
-                zis.closeEntry();
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     public static void readEmployeesFromZip(String fileName, Map<Long, Employee> employees) {
         try (FileInputStream fis = new FileInputStream(fileName);
              ZipInputStream zis = new ZipInputStream(fis)) {
@@ -173,7 +192,6 @@ public class Controller implements Serializable {
             while ((entry = zis.getNextEntry()) != null) {
                 System.out.println("Employee details from " + entry.getName() + ":");
 
-                // Read employee details from the zip file
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 byte[] buffer = new byte[1024];
                 int bytesRead;
@@ -181,26 +199,45 @@ public class Controller implements Serializable {
                     baos.write(buffer, 0, bytesRead);
                 }
 
-                // Deserialize the employee object from the byte array
-                ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-                try (ObjectInputStream ois = new ObjectInputStream(bais)) {
-                    Employee updatedEmployee = (Employee) ois.readObject();
+                String employeeDetails = new String(baos.toByteArray());
 
-                    // Update the existing employee in the map
-                    employees.put(updatedEmployee.getPesel(), updatedEmployee);
+                Employee employee = parseEmployeeDetails(employeeDetails);
 
-                    // Display employee details in the terminal
-                    System.out.println(updatedEmployee.toString());
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
+                employees.put(employee.getPesel(), employee);
 
-                // Close the entry
+                System.out.println(employeeDetails);
+
                 zis.closeEntry();
             }
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    private static Employee parseEmployeeDetails(String employeeDetails) {
+        String[] lines = employeeDetails.split("\n");
+
+        Long pesel = Long.parseLong(lines[0].substring(lines[0].indexOf(":") + 1).trim());
+        String name = lines[1].substring(lines[1].indexOf(":") + 1).trim();
+        String secondName = lines[2].substring(lines[2].indexOf(":") + 1).trim();
+        String position = lines[3].substring(lines[3].indexOf(":") + 1).trim();
+        int payment = Integer.parseInt(lines[4].substring(lines[4].indexOf(":") + 1).trim());
+        int number = Integer.parseInt(lines[5].substring(lines[5].indexOf(":") + 1).trim());
+
+        if ("Director".equals(position)) {
+            int cardNumber = Integer.parseInt(lines[6].substring(lines[6].indexOf(":") + 1).trim());
+            int dutyAllowance = Integer.parseInt(lines[7].substring(lines[7].indexOf(":") + 1).trim());
+            int costLimit = Integer.parseInt(lines[8].substring(lines[8].indexOf(":") + 1).trim());
+            return new Director(pesel, name, secondName, payment, number, cardNumber, dutyAllowance, costLimit);
+        }
+        else if ("Seller".equals(position)) {
+            short commissionRate = Short.parseShort(lines[6].substring(lines[6].indexOf(":") + 1).trim());
+            int commissionLimit = Integer.parseInt(lines[7].substring(lines[7].indexOf(":") + 1).trim());
+            return new Seller(pesel, name, secondName, payment, number, commissionLimit, commissionRate);
+        }
+        else {
+            return null;
         }
     }
 }
